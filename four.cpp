@@ -1,49 +1,49 @@
-#include <stdio.h>
 #include <iostream>
-#include <stdlib.h>
 #include <mpi.h>
 
-
+/* Testar com 100000000 e 100000000 e depois alterar o rank para 8    -> Cálculo dos speedups  */
 using namespace std;
 
-
-// TO EXECUTE THIS PROGRAMMER
-//mpic++ -g -Wall -o mpi_sum_multi two.cpp
-//mpiexec -n 2 ./mpi_sum_multi
-
-int main(int argc, char **argv ) {
-
+int main(int argc, char **argv) {
     MPI_Init(&argc, &argv);
-    //PROCESS ZERO
-    int world_rank;
+
+    int world_rank,world_size;
+    int NX = atoi (argv[1]);    
+
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-    int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-    int sub_rand_nums;
+
+    int ScatterData[NX];
+    int ReceiveData[NX];
+    double sum_to[world_size];
+    //fill the buffer
+    if(world_rank == 0){
+        for (int i=0; i<NX; i++) {
+            ScatterData[i] = rand() % 100;
+        }
+    }
+    MPI_Scatter(ScatterData,NX/world_size,MPI_INT,ReceiveData,NX/world_size,MPI_INT,0,MPI_COMM_WORLD);
+
+    double sum;
+   
+    for(int i=0;i<NX/world_size;i++){
+        sum+=ReceiveData[i];
+    }
+    sum = sum/NX;
     
-    if (world_rank == 0) {
-        int rand_nums[10];
-        for(int i=0;i<10;i++){
-            rand_nums[i] = rand() % 100;
-        } 
-    }
 
-    // Scatter the random numbers to all processes
-    MPI_Scatter(rand_nums, 2, MPI_FLOAT, sub_rand_nums,2, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    MPI_Gather(&sum,1,MPI_INT,sum_to,1,MPI_INT,0,MPI_COMM_WORLD);
+    
 
-    // Compute the average of your subset
-    float sub_avg = compute_avg(sub_rand_nums, 2);
-    // Gather all partial averages down to the root process
-    float *sub_avgs = NULL;
-    if (world_rank == 0) {
-        sub_avgs = malloc(sizeof(float) * world_size);
+    if(world_rank == 0){
+        double average = 0;
+        for(int i=0;i<world_size;i++){
+            average += sum_to[i];
+        }
+        average =  average/world_size;
+        cout << "average is: " << average << endl;
     }
-    MPI_Gather(&sub_avg, 1, MPI_FLOAT, sub_avgs, 1, MPI_FLOAT, 0,MPI_COMM_WORLD);
-
-    // Compute the total average of all numbers.
-    if (world_rank == 0) {
-        float avg = compute_avg(sub_avgs, world_size);
-        cout << "Avengere is: " << avg << endl;
-    }
-    return 0;
+    MPI_Finalize();
 }
+
+   
