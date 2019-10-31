@@ -1,13 +1,13 @@
 #include <iostream>
 #include <mpi.h>
-#define NX 1000000ULL
 
 /* Testar com 100000000 e 100000000 e depois alterar o rank para 8    -> Cálculo dos speedups  */
 using namespace std;
 
 int main(int argc, char **argv) {
     MPI_Init(&argc, &argv);
-
+    double start, final;
+    long int NX = atoi (argv[1]);
     int world_rank, world_size;
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
@@ -17,6 +17,7 @@ int main(int argc, char **argv) {
 
     unsigned long long sum_to[world_size]; // this is a vector that received all local sums
     if(world_rank == 0){
+        start = MPI_Wtime();
         for (int i=0; i<int(NX); i++) {
             ScatterDataOne[i] = rand() % 100;
             ScatterDataTwo[i] = rand() % 100;
@@ -51,8 +52,10 @@ int main(int argc, char **argv) {
             sum_totally += sum_to[i];
         }
         cout << "sum is: " << sum_totally << endl;
+        final = MPI_Wtime();
+        cout << "Totally time is " << final-start << endl;
     }
-
+    
     /*cout << "After Scattter" <<endl;
     for(int i=0;i<NX/world_size;i++){
         cout << "Process " << world_rank << " received " << ReceiveData[i] << endl;
